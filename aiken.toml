@@ -1,0 +1,16 @@
+name = "apea-aiken-batch-1/crowdfunding_a"
+version = "0.1.0"
+compiler = "v1.1.5"
+plutus = "v3"
+license = "Apache-2.0"
+description = "Aiken contracts for project 'apea-aiken-batch-1/crowdfunding_a'"
+
+[repository]
+user = "apea-aiken-batch-1"
+project = "crowdfunding_a"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "ab0dd7205b1282d62a6c9722914f5a3824842ff6"
+source = "github"
