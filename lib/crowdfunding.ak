@@ -53,7 +53,7 @@ fn validate_pledge_campaign(
       _ -> ""
     }
 
-  expect Some(Input { output: campaign_utxo, .. }): Option<Input> =
+  expect Some(Input { output: campaign_utxo, .. }) =
     inputs |> transaction.find_input(o_ref)
   let get_input_lovelace =
     fn() { assets.lovelace_of(campaign_utxo.value) }
@@ -68,15 +68,14 @@ fn validate_pledge_campaign(
   expect validity_range |> interval.is_entirely_before(deadline)
 
   // Must only have 1 output to the Crowdfunding address
-  expect 1 =
-    list.count(
-      outputs,
-      fn(Output { address, .. }: Output) { address == campaign_utxo.address },
-    )
+  expect 1 = {
+    let Output { address, .. } <- list.count(outputs)
+    address == campaign_utxo.address
+  }
 
   // Must resend datum
   let must_resend_datum: Bool = {
-    let Output { address, value, datum, .. }: Output <- list.any(outputs)
+    let Output { address, value, datum, .. } <- list.any(outputs)
     when datum is {
       InlineDatum(campaign) ->
         if campaign
@@ -169,9 +168,11 @@ fn must_reach_goal(
   o_ref: OutputReference,
   goal: Lovelace,
 ) -> Bool {
-  expect Some(Input { output: Output { value, .. }, .. }): Option<Input> =
+  expect Some(Input { output: Output { datum, .. }, .. }) =
     transaction_inputs |> transaction.find_input(o_ref)
-  assets.lovelace_of(value) >= goal
+  expect InlineDatum(campaign) = datum
+  expect CampaignDatum { backers, .. } = campaign
+  list.reduce(backers, 0, fn(sum, Pair(_, lovelace)) { sum + lovelace }) >= goal
 }
 
 // ## Utility Functions
