@@ -289,6 +289,112 @@ test validate_pledge_campaign_positive_3() {
       )
 }
 
+test validate_pledge_campaign_positive_4() {
+  trace @"Positive: Pledge an existing campaign near deadline"
+
+  let Pair(backer_3_address, backer_3_pledge) = backer_3
+  let Pair(_, backer_1_pledge) = backer_1
+  let Pair(_, backer_2_pledge) = backer_2
+
+  let campaign_o_ref =
+    OutputReference {
+      transaction_id: #"01030000000000000000000000000000000000000000000000000056",
+      output_index: 0,
+    }
+
+  let campaign_datum =
+    CampaignDatum {
+      ..campaign_1,
+      backers: [backer_1, backer_2, ..campaign_1.backers],
+    }
+
+  let tx_input_from_script =
+    Input(
+      campaign_o_ref,
+      Output {
+        address: crowdfunding_address,
+        value: assets.from_lovelace(
+          min_lovelace + backer_1_pledge + backer_2_pledge,
+        ),
+        datum: InlineDatum(campaign_datum),
+        reference_script: None,
+      },
+    )
+
+  let tx_input_from_backer =
+    Input(
+      OutputReference {
+        transaction_id: #"b3010000000000000000000000000000000000000000000000000056",
+        output_index: 0,
+      },
+      Output {
+        address: backer_3_address.pkh
+          |> address.from_verification_key
+          |> address.with_delegation_key(backer_3_address.skh),
+        value: assets.from_lovelace(backer_3_pledge),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    )
+
+  let tx_output_to_script =
+    Output {
+      address: crowdfunding_address,
+      value: assets.from_lovelace(
+        min_lovelace + backer_1_pledge + backer_2_pledge + backer_3_pledge,
+      ),
+      datum: InlineDatum(
+        CampaignDatum {
+          ..campaign_datum,
+          backers: [backer_3, ..campaign_datum.backers],
+        },
+      ),
+      reference_script: None,
+    }
+
+  and {
+    campaign_datum
+      |> crowdfunding.validate_spend_campaign(
+          PledgeCampaign,
+          campaign_o_ref,
+          Transaction {
+            ..transaction.placeholder,
+            inputs: [tx_input_from_script, tx_input_from_backer],
+            outputs: [tx_output_to_script],
+            validity_range: interval.after(now),
+            extra_signatories: [backer_3_pkh],
+          },
+        ),
+    campaign_datum
+      |> crowdfunding.validate_spend_campaign(
+          PledgeCampaign,
+          campaign_o_ref,
+          Transaction {
+            ..transaction.placeholder,
+            inputs: [tx_input_from_script, tx_input_from_backer],
+            outputs: [tx_output_to_script],
+            validity_range: interval.after(campaign_datum.deadline - 3_600_000),
+            extra_signatories: [backer_3_pkh],
+          },
+        ),
+    campaign_datum
+      |> crowdfunding.validate_spend_campaign(
+          PledgeCampaign,
+          campaign_o_ref,
+          Transaction {
+            ..transaction.placeholder,
+            inputs: [tx_input_from_script, tx_input_from_backer],
+            outputs: [tx_output_to_script],
+            validity_range: interval.between(
+              campaign_datum.deadline - 3_600_000,
+              campaign_datum.deadline + 3_600_000,
+            ),
+            extra_signatories: [backer_3_pkh],
+          },
+        ),
+  }
+}
+
 // ### PledgeCampaign negative cases
 
 test validate_pledge_campaign_negative_1() fail {

@@ -14,3 +14,10 @@ platform = "github"
 name = "aiken-lang/stdlib"
 version = "ab0dd7205b1282d62a6c9722914f5a3824842ff6"
 source = "github"
+
+[[dependencies]]
+name = "aiken-extra/time_util"
+version = "5.210.202409"
+source = "github"
+
+[config]

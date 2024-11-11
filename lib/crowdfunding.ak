@@ -2,7 +2,6 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{VerificationKeyHash}
-use aiken/interval
 use aiken/primitive/bytearray
 use cardano/address.{Inline, VerificationKey}
 use cardano/assets.{Lovelace}
@@ -14,6 +13,7 @@ use crowdfunding/types.{
   PaymentKeyHash, PledgeCampaign, RedeemerAction, StakeKeyHash,
 }
 use crowdfunding/utils
+use time_util/unsafe/bound as unsafe_unwrap
 
 pub fn validate_spend_campaign(
   campaign: CampaignDatum,
@@ -65,7 +65,7 @@ fn validate_pledge_campaign(
   expect backer_pkh != creator.pkh
 
   // Must pledge before deadline
-  expect validity_range |> interval.is_entirely_before(deadline)
+  expect unsafe_unwrap.finite_start_of(validity_range) < deadline
 
   // Must only have 1 output to the Crowdfunding address
   expect 1 = {
