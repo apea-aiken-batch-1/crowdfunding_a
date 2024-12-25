@@ -3,8 +3,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/blocks/:path*",
-        destination: "https://cardano-preprod.blockfrost.io/api/v0/blocks/:path*",
+        source: "/koios/:path*",
+        destination: "https://preview.koios.rest/api/v1/:path*",
       },
     ];
   },

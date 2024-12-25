@@ -1,10 +1,9 @@
 import { Accordion, AccordionItem } from "@nextui-org/accordion";
-
 import { ZonedDateTime } from "@internationalized/date";
 
+import { CampaignDatum, CampaignRedeemerAction } from "@/types/cardano";
 import CreatedCampaigns from "./creator/CreatedCampaigns";
 import CreateCampaignButton from "./creator/CreateCampaignButton";
-
 import AvailableCampaigns from "./backer/AvailableCampaigns";
 
 import {
@@ -22,7 +21,7 @@ import {
   UTxO,
   validatorToAddress,
 } from "@lucid-evolution/lucid";
-import { CampaignDatum, CampaignRedeemerAction } from "@/types/cardano";
+import { network } from "@/config/lucid";
 
 const Script = {
   Spend: applyDoubleCborEncoding(
@@ -42,7 +41,7 @@ export default function Dashboard(props: {
 }) {
   const { lucid, address, setActionResult, onError } = props;
 
-  const crowdfundingAddress = validatorToAddress(lucid.config().network, spendingValidator);
+  const crowdfundingAddress = validatorToAddress(network, spendingValidator);
 
   async function submitTx(tx: TxSignBuilder) {
     const txSigned = await tx.sign.withWallet().complete();
@@ -103,7 +102,7 @@ export default function Dashboard(props: {
           campaign.backers.forEach((lovelace, { pkh, skh }) => {
             const paymentCredential = keyHashToCredential(pkh);
             const stakeCredential = skh ? keyHashToCredential(skh) : undefined;
-            const backerAddress = credentialToAddress(lucid.config().network, paymentCredential, stakeCredential);
+            const backerAddress = credentialToAddress(network, paymentCredential, stakeCredential);
             newTx = newTx.pay.ToAddress(backerAddress, { lovelace });
           });
           const tx = await newTx.complete();
@@ -131,8 +130,9 @@ export default function Dashboard(props: {
             backers: campaign.backers.set(key, (campaign.backers.get(key) ?? 0n) + val),
           };
 
-          const block = await fetch("/blocks/latest", { headers: { project_id: `${process.env.NEXT_PUBLIC_BF_PID}` } });
-          const { time } = await block.json();
+          const blocks = await fetch("/koios/tip?select=block_time");
+          const [{ block_time }] = await blocks.json();
+          const now = block_time * 1_000;
 
           const tx = await lucid
             .newTx()
@@ -144,7 +144,7 @@ export default function Dashboard(props: {
               { ...utxo.assets, lovelace: utxo.assets.lovelace + val }
             )
             .addSigner(address)
-            .validFrom(time * 1_000)
+            .validFrom(now)
             .complete();
 
           submitTx(tx).then(setActionResult).catch(onError);
